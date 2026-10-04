@@ -1,0 +1,84 @@
+@page "/game"
+@rendermode InteractiveServer
+@using friendly_cow.Services
+@inject GameRoomManager GameManager
+@implements IDisposable
+
+<h3>Rock Paper Scissors - Room: @roomCode</h3>
+<hr />
+
+@if (myPlayerNumber == 0)
+{
+    <h4>Who are you?</h4>
+    <button class="btn btn-primary" @onclick="() => SetPlayer(1)">Join as Player 1</button>
+    <button class="btn btn-secondary" @onclick="() => SetPlayer(2)">Join as Player 2</button>
+}
+else
+{
+    <h4>You are Player @myPlayerNumber</h4>
+    
+    @if (string.IsNullOrEmpty(roomState.Result))
+    {
+        <div class="my-3">
+            <button class="btn btn-outline-dark" @onclick='() => Play("Rock")'>🪨 Rock</button>
+            <button class="btn btn-outline-dark" @onclick='() => Play("Paper")'>📄 Paper</button>
+            <button class="btn btn-outline-dark" @onclick='() => Play("Scissors")'>✂️ Scissors</button>
+        </div>
+        
+        <p>Player 1 locked in: @(string.IsNullOrEmpty(roomState.Player1Move) ? "Waiting..." : "✅ Ready")</p>
+        <p>Player 2 locked in: @(string.IsNullOrEmpty(roomState.Player2Move) ? "Waiting..." : "✅ Ready")</p>
+    }
+    else
+    {
+        <div class="alert alert-success my-3">
+            <h4>@roomState.Result</h4>
+            <p>Player 1 played: <strong>@roomState.Player1Move</strong></p>
+            <p>Player 2 played: <strong>@roomState.Player2Move</strong></p>
+        </div>
+        <button class="btn btn-primary" @onclick="Reset">Play Again</button>
+    }
+}
+
+@code {
+    private string roomCode = "1234";
+    private int myPlayerNumber = 0;
+    private GameState roomState = new GameState();
+
+    protected override void OnInitialized()
+    {
+        // 1. Subscribe to updates
+        GameManager.OnGameUpdated += HandleGameUpdate;
+        // 2. Fetch the current state immediately
+        roomState = GameManager.GetRoom(roomCode);
+    }
+
+    private void SetPlayer(int num)
+    {
+        myPlayerNumber = num;
+    }
+
+    private void Play(string move)
+    {
+        GameManager.MakeMove(roomCode, myPlayerNumber, move);
+    }
+
+    private void Reset()
+    {
+        GameManager.ResetGame(roomCode);
+    }
+
+    private void HandleGameUpdate(string updatedRoomCode)
+    {
+        // Only update if the event was for our specific room
+        if (updatedRoomCode == roomCode)
+        {
+            roomState = GameManager.GetRoom(roomCode);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        GameManager.OnGameUpdated -= HandleGameUpdate;
+    }
+}
