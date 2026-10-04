@@ -1,11 +1,14 @@
 using friendly_cow.Components;
 using friendly_cow.Services;
+using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddMudServices();
 
 // Add the shared game manager
 builder.Services.AddSingleton<GameRoomManager>();

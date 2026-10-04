@@ -1,0 +1,17 @@
+﻿@page "/clicker"
+@rendermode InteractiveServer
+
+<h3>Clicker</h3>
+
+<MudIconButton Icon = "fa-solid fa-dog" @onclick=Counter />
+<MudIconButton Icon = "fa-solid fa-cat" @onclick=Counter />
+<div> @counter </div>
+
+@code {
+    private int counter = 0;
+    private void Counter()
+    {
+        counter++;
+    }
+
+}
