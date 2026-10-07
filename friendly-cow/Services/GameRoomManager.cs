@@ -35,6 +35,45 @@ public class GameRoomManager
         OnGameUpdated?.Invoke(roomCode);
     }
 
+    public async Task StartGameSession(string roomCode, int seconds)
+    {
+        var room = GetRoom(roomCode);
+        room.IsStarted = true;
+        room.Player1Score = 0;
+        room.Player2Score = 0;
+        room.Result = "";
+        OnGameUpdated?.Invoke(roomCode);
+
+        while (seconds > 0)
+        {
+            await Task.Delay(1000);
+            seconds--;
+        }
+
+        room.IsStarted = false;
+        
+        if (room.Player1Score > room.Player2Score)
+            room.Result = $"Player 1 Wins with {room.Player1Score} clicks!";
+        else if (room.Player2Score > room.Player1Score)
+            room.Result = $"Player 2 Wins with {room.Player2Score} clicks!";
+        else
+            room.Result = "It's a tie!";
+
+        OnGameUpdated?.Invoke(roomCode);
+    }
+
+    public void AddClick(string roomCode, int playerNumber)
+    {
+        var room = GetRoom(roomCode);
+        if (room.IsStarted)
+        {
+            if (playerNumber == 1) room.Player1Score++;
+            if (playerNumber == 2) room.Player2Score++;
+
+            OnGameUpdated?.Invoke(roomCode);
+        }
+    }
+
     public void ResetGame(string roomCode)
     {
         if (_rooms.ContainsKey(roomCode))
@@ -57,6 +96,15 @@ public class GameRoomManager
         
         return "Player 2 Wins!";
     }
+
+    public void SetPlayerIcon(string roomCode, int playerNumber, string icon)
+    {
+        var room = GetRoom(roomCode);
+        if (playerNumber == 1) room.Player1Icon = icon;
+        if (playerNumber == 2) room.Player2Icon = icon;
+
+        OnGameUpdated?.Invoke(roomCode);
+    }
 }
 
 // A simple class to hold the data for a single game room
@@ -65,4 +113,13 @@ public class GameState
     public string Player1Move { get; set; } = "";
     public string Player2Move { get; set; } = "";
     public string Result { get; set; } = "";
+
+    // Für clicker
+    public int Player1Score { get; set; } = 0;
+    public int Player2Score { get; set; } = 0;
+    public bool IsStarted { get; set; } = false;
+
+    public string Player1Icon { get; set; } = "fa-solid fa-dog";
+    public string Player2Icon { get; set; } = "fa-solid fa-cat";
 }
+

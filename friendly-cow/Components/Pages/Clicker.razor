@@ -1,17 +1,120 @@
 ﻿@page "/clicker"
 @rendermode InteractiveServer
+@using friendly_cow.Services
+@inject GameRoomManager GameManager
+@implements IDisposable
 
 <h3>Clicker</h3>
 
-<MudIconButton Icon = "fa-solid fa-dog" @onclick=Counter />
-<MudIconButton Icon = "fa-solid fa-cat" @onclick=Counter />
-<div> @counter </div>
+@if (myPlayerNumber == 0)
+{
+    <h4>Who are you?</h4>
+    <button class="btn btn-primary" @onclick="() => SetPlayer(1)">Join as Player 1</button>
+    <button class="btn btn-secondary" @onclick="() => SetPlayer(2)">Join as Player 2</button>
+}
+else
+{
+    <h4>You are Player @myPlayerNumber</h4>
+
+    @if (string.IsNullOrEmpty(roomState.Result))
+    {
+        @* only one person should pick time *@
+        @if(!roomState.IsStarted)
+        {
+            <div class="mb-3">
+                <p>Wähle dein Icon:</p>
+                <MudIconButton Icon="fa-solid fa-dog" Variant="Variant.Outlined" @onclick='() => ChooseIcon("fa-solid fa-dog")' />
+                <MudIconButton Icon="fa-solid fa-cat" Variant="Variant.Outlined" @onclick='() => ChooseIcon("fa-solid fa-cat")' />
+                <MudIconButton Icon="fa-solid fa-dragon" Variant="Variant.Outlined" @onclick='() => ChooseIcon("fa-solid fa-dragon")' />
+            </div>
+            <MudNumericField @bind-Value="IntValue" Label="Select time" Variant="Variant.Outlined" Min="5" Max="60"/>
+            <button class="btn btn-primary" @onclick=StartGame> Start Game </button>
+        }
+        else
+        {
+            <div class="my-3">
+                <MudIconButton Icon="@GetMyIcon()" @onclick="Counter" Size="Size.Large" Color="Color.Error" Variant="Variant.Filled" />
+            </div> 
+        }
+
+    }
+    else
+    {
+        <div class="alert alert-success my-3">
+            <h4>@roomState.Result</h4>
+        </div>
+        <button class="btn btn-primary" @onclick="Reset">Play Again</button>
+
+    }
+
+}
+
+<div class="mt-4 p-3 border rounded">
+    <p>Player 1 Clicks: <strong>@roomState.Player1Score</strong></p>
+    <p>Player 2 Clicks: <strong>@roomState.Player2Score</strong></p>
+</div>
+
 
 @code {
+    public int IntValue { get; set; } = 10;
     private int counter = 0;
+    private int remaining_seconds = 0;
+
+    private async Task StartGame()
+    {
+        await GameManager.StartGameSession(roomCode, IntValue);
+    }
+
     private void Counter()
     {
-        counter++;
+        GameManager.AddClick(roomCode, myPlayerNumber);      
     }
+    private string GetMyIcon()
+    {
+        return myPlayerNumber == 1 ? roomState.Player1Icon : roomState.Player2Icon;
+    }
+
+    private void ChooseIcon(string icon)
+    {
+        GameManager.SetPlayerIcon(roomCode, myPlayerNumber, icon);
+    }
+
+    private string roomCode = "1234";
+    private int myPlayerNumber = 0;
+    private GameState roomState = new GameState();
+
+    protected override void OnInitialized()
+    {
+        GameManager.OnGameUpdated += HandleGameUpdate;
+        roomState = GameManager.GetRoom(roomCode);
+    }
+
+    private void SetPlayer(int num)
+    {
+        myPlayerNumber = num;
+    }
+
+    private void Reset()
+    {
+        GameManager.ResetGame(roomCode);
+    }
+
+    private void HandleGameUpdate(string updatedRoomCode)
+    {
+        // Only update if the event was for our specific room
+        if (updatedRoomCode == roomCode)
+        {
+            roomState = GameManager.GetRoom(roomCode);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        GameManager.OnGameUpdated -= HandleGameUpdate;
+    }
+
+
+
 
 }
